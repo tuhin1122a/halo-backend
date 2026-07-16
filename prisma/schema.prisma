@@ -1,0 +1,195 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("MONGODB_URI")
+}
+
+enum Role {
+  ADMIN
+  ASSISTANT_ADMIN
+  USER
+  GUEST
+}
+
+model User {
+  id               String   @id @default(auto()) @map("_id") @db.ObjectId
+  email            String   @unique
+  password         String?
+  name             String?
+  phoneNumber      String?  @unique
+  countryCode      String?
+  isVerified       Boolean  @default(false)
+  role             Role     @default(USER)
+  refreshToken     String?
+  failedAttempts   Int      @default(0)
+  lockoutUntil     DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+  bio              String?
+  address          String?
+  education        String?
+  avatarUrl        String?
+  coverImageUrl    String?
+  coverPosition    Json?
+  avatarPosition   Json?
+  isOnline         Boolean  @default(false)
+  lastSeen         DateTime? @default(now())
+  otp              String?
+  otpExpires       DateTime?
+
+  // Remote Control
+  registeredDevices  RegisteredDevice[]
+
+  // Messaging
+  sentMessages      Message[] @relation("SentMessages")
+  receivedMessages  Message[] @relation("ReceivedMessages")
+}
+
+// Remote Control System
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  BUSY
+}
+
+model RegisteredDevice {
+  id            String        @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String        @db.ObjectId
+  user          User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceName    String
+  deviceModel   String?
+  osVersion     String?
+  appVersion    String?
+  deviceId      String        @unique // Unique device identifier
+  status        DeviceStatus  @default(OFFLINE)
+  lastSeen      DateTime      @default(now())
+  socketId      String?       // Current socket connection ID
+  fcmToken      String?       // For push notifications
+  isActive      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  sessions      RemoteSession[]
+}
+
+model RemoteSession {
+  id            String           @id @default(auto()) @map("_id") @db.ObjectId
+  deviceId      String           @db.ObjectId
+  device        RegisteredDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  startedAt     DateTime         @default(now())
+  endedAt       DateTime?
+  isActive      Boolean          @default(true)
+  webSocketId   String?          // Web client socket ID
+  peerConnection Json?           // WebRTC connection details
+  commands      RemoteCommand[]
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+}
+
+enum CommandType {
+  SCREEN_SHARE_START
+  SCREEN_SHARE_STOP
+  CONTROL_START
+  CONTROL_STOP
+  TOUCH_EVENT
+  TOUCH_CLICK
+  TOUCH_SWIPE
+  TYPE_TEXT
+  KEY_EVENT
+  FILE_TRANSFER
+  GET_NOTIFICATIONS
+  SEND_SMS
+  MAKE_CALL
+  OPEN_APP
+  GET_STATS
+  GET_FILES
+  GET_GALLERY
+  GET_THUMBNAIL
+  VIEW_FILE
+  CAMERA_CAPTURE
+  CAMERA_STREAM_START
+  CAMERA_STREAM_STOP
+  AUDIO_RECORD
+  AUDIO_STREAM_START
+  AUDIO_STREAM_STOP
+  VIBRATE
+  GET_INSTALLED_APPS
+  CUSTOM
+  LOGOUT
+}
+
+enum CommandStatus {
+  PENDING
+  EXECUTING
+  COMPLETED
+  FAILED
+}
+
+model RemoteCommand {
+  id            String         @id @default(auto()) @map("_id") @db.ObjectId
+  sessionId     String         @db.ObjectId
+  session       RemoteSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type          CommandType
+  payload       Json?          // Command parameters
+  status        CommandStatus  @default(PENDING)
+  result        Json?          // Command result
+  error         String?
+  createdAt     DateTime       @default(now())
+  executedAt    DateTime?
+  completedAt   DateTime?
+}
+
+model Message {
+  id              String    @id @default(auto()) @map("_id") @db.ObjectId
+  content         String?
+  senderId        String    @db.ObjectId
+  receiverId      String    @db.ObjectId
+  isRead          Boolean   @default(false)
+  messageType     String    @default("text") // text, image, voice, file
+  fileUrl         String?
+  fileName        String?
+  tempId          String?
+  replyToId       String?   @db.ObjectId
+  replyTo         Message?  @relation("MessageReplies", fields: [replyToId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  replies         Message[] @relation("MessageReplies")
+  isPinned        Boolean   @default(false)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  sender          User      @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+  receiver        User      @relation("ReceivedMessages", fields: [receiverId], references: [id], onDelete: Cascade)
+}
+
+model ChatSetting {
+  id                String   @id @default(auto()) @map("_id") @db.ObjectId
+  user1Id           String   @db.ObjectId
+  user2Id           String   @db.ObjectId
+  themeId           String?
+  quickReaction     String   @default("👍")
+  user1Nickname     String?
+  user2Nickname     String?
+  isMutedByUser1    Boolean  @default(false)
+  isMutedByUser2    Boolean  @default(false)
+  disappearingTimer Int      @default(0)
+  wordEffects       String?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@unique([user1Id, user2Id])
+}
+
+model UserBlock {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  blockerId    String   @db.ObjectId
+  blockedId    String   @db.ObjectId
+  isRestricted Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@unique([blockerId, blockedId])
+}
