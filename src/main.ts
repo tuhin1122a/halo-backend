@@ -3,11 +3,12 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn'], // Only show errors and warnings from Nest itself
+    logger: ['error', 'warn', 'log'],
   });
   app.enableCors({
     origin: [
       'https://halo.codevionix.com',
+      'https://haloapi.codevionix.com',
       'https://taskpro.codevionix.com',
       'http://localhost:3000',
       'http://localhost:5173',
@@ -18,5 +19,6 @@ async function bootstrap() {
   app.setGlobalPrefix('api'); // Add /api prefix to all routes
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
+  console.log(`Server is running on port ${port}`);
 }
 bootstrap();

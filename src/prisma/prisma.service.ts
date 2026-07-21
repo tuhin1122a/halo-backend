@@ -16,8 +16,12 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   }
 
   async onModuleInit() {
-    await this.$connect();
-    this.logger.log('Connected to MongoDB via Prisma');
+    try {
+      await this.$connect();
+      this.logger.log('Connected to MongoDB via Prisma');
+    } catch (error) {
+      this.logger.error('Failed to connect to MongoDB via Prisma:', error);
+    }
 
     // @ts-ignore
     this.$on('error', (e: any) => {
