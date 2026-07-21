@@ -1,0 +1,205 @@
+import { PrismaService } from '../prisma/prisma.service';
+export declare class RemoteControlService {
+    private prisma;
+    private readonly logger;
+    constructor(prisma: PrismaService);
+    private retryOnWriteConflict;
+    registerDevice(userId: string, deviceInfo: {
+        deviceName: string;
+        deviceModel?: string;
+        osVersion?: string;
+        appVersion?: string;
+        deviceId: string;
+        fcmToken?: string;
+    }, socketId: string): Promise<{
+        lastSeen: Date;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        deviceName: string;
+        deviceModel: string | null;
+        osVersion: string | null;
+        appVersion: string | null;
+        deviceId: string;
+        status: import("@prisma/client").$Enums.DeviceStatus;
+        socketId: string | null;
+        fcmToken: string | null;
+        isActive: boolean;
+    }>;
+    handleDeviceDisconnect(socketId: string): Promise<void>;
+    getUserDevices(userId: string): Promise<{
+        lastSeen: Date;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        deviceName: string;
+        deviceModel: string | null;
+        osVersion: string | null;
+        appVersion: string | null;
+        deviceId: string;
+        status: import("@prisma/client").$Enums.DeviceStatus;
+        socketId: string | null;
+        fcmToken: string | null;
+        isActive: boolean;
+    }[]>;
+    startSession(deviceId: string, webSocketId: string, requestingUserId: string): Promise<{
+        device: {
+            lastSeen: Date;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            userId: string;
+            deviceName: string;
+            deviceModel: string | null;
+            osVersion: string | null;
+            appVersion: string | null;
+            deviceId: string;
+            status: import("@prisma/client").$Enums.DeviceStatus;
+            socketId: string | null;
+            fcmToken: string | null;
+            isActive: boolean;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deviceId: string;
+        isActive: boolean;
+        startedAt: Date;
+        endedAt: Date | null;
+        webSocketId: string | null;
+        peerConnection: import("@prisma/client/runtime/library").JsonValue | null;
+    }>;
+    updateSessionStatus(sessionId: string, accepted: boolean): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deviceId: string;
+        isActive: boolean;
+        startedAt: Date;
+        endedAt: Date | null;
+        webSocketId: string | null;
+        peerConnection: import("@prisma/client/runtime/library").JsonValue | null;
+    }>;
+    getSession(sessionId: string): Promise<({
+        device: {
+            lastSeen: Date;
+            id: string;
+            createdAt: Date;
+            updatedAt: Date;
+            userId: string;
+            deviceName: string;
+            deviceModel: string | null;
+            osVersion: string | null;
+            appVersion: string | null;
+            deviceId: string;
+            status: import("@prisma/client").$Enums.DeviceStatus;
+            socketId: string | null;
+            fcmToken: string | null;
+            isActive: boolean;
+        };
+    } & {
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deviceId: string;
+        isActive: boolean;
+        startedAt: Date;
+        endedAt: Date | null;
+        webSocketId: string | null;
+        peerConnection: import("@prisma/client/runtime/library").JsonValue | null;
+    }) | null>;
+    createCommand(sessionId: string, type: string, payload?: any): Promise<{
+        error: string | null;
+        id: string;
+        createdAt: Date;
+        result: import("@prisma/client/runtime/library").JsonValue | null;
+        status: import("@prisma/client").$Enums.CommandStatus;
+        type: import("@prisma/client").$Enums.CommandType;
+        payload: import("@prisma/client/runtime/library").JsonValue | null;
+        executedAt: Date | null;
+        completedAt: Date | null;
+        sessionId: string;
+    }>;
+    updateCommandStatus(commandId: string, status: string, result?: any, error?: string): Promise<{
+        error: string | null;
+        id: string;
+        createdAt: Date;
+        result: import("@prisma/client/runtime/library").JsonValue | null;
+        status: import("@prisma/client").$Enums.CommandStatus;
+        type: import("@prisma/client").$Enums.CommandType;
+        payload: import("@prisma/client/runtime/library").JsonValue | null;
+        executedAt: Date | null;
+        completedAt: Date | null;
+        sessionId: string;
+    }>;
+    getCommand(commandId: string): Promise<{
+        error: string | null;
+        id: string;
+        createdAt: Date;
+        result: import("@prisma/client/runtime/library").JsonValue | null;
+        status: import("@prisma/client").$Enums.CommandStatus;
+        type: import("@prisma/client").$Enums.CommandType;
+        payload: import("@prisma/client/runtime/library").JsonValue | null;
+        executedAt: Date | null;
+        completedAt: Date | null;
+        sessionId: string;
+    } | null>;
+    getSessionCommands(sessionId: string): Promise<{
+        error: string | null;
+        id: string;
+        createdAt: Date;
+        result: import("@prisma/client/runtime/library").JsonValue | null;
+        status: import("@prisma/client").$Enums.CommandStatus;
+        type: import("@prisma/client").$Enums.CommandType;
+        payload: import("@prisma/client/runtime/library").JsonValue | null;
+        executedAt: Date | null;
+        completedAt: Date | null;
+        sessionId: string;
+    }[]>;
+    endSession(sessionId: string): Promise<{
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        deviceId: string;
+        isActive: boolean;
+        startedAt: Date;
+        endedAt: Date | null;
+        webSocketId: string | null;
+        peerConnection: import("@prisma/client/runtime/library").JsonValue | null;
+    }>;
+    getDevice(deviceId: string): Promise<{
+        lastSeen: Date;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        deviceName: string;
+        deviceModel: string | null;
+        osVersion: string | null;
+        appVersion: string | null;
+        deviceId: string;
+        status: import("@prisma/client").$Enums.DeviceStatus;
+        socketId: string | null;
+        fcmToken: string | null;
+        isActive: boolean;
+    } | null>;
+    deleteDevice(deviceId: string): Promise<{
+        lastSeen: Date;
+        id: string;
+        createdAt: Date;
+        updatedAt: Date;
+        userId: string;
+        deviceName: string;
+        deviceModel: string | null;
+        osVersion: string | null;
+        appVersion: string | null;
+        deviceId: string;
+        status: import("@prisma/client").$Enums.DeviceStatus;
+        socketId: string | null;
+        fcmToken: string | null;
+        isActive: boolean;
+    }>;
+}
