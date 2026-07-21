@@ -47,7 +47,22 @@ export class MessagesService {
       }
     }
 
-    return Array.from(chatsMap.values()).sort((a, b) => b.lastTimestamp.getTime() - a.lastTimestamp.getTime());
+    const finalChats: any[] = [];
+    for (const chat of chatsMap.values()) {
+      const followRelation = await this.prisma.follow.findFirst({
+        where: {
+          OR: [
+            { followerId: userId, followingId: chat.id, status: 'ACCEPTED' },
+            { followerId: chat.id, followingId: userId, status: 'ACCEPTED' }
+          ]
+        }
+      });
+      if (followRelation) {
+        finalChats.push(chat);
+      }
+    }
+
+    return finalChats.sort((a, b) => b.lastTimestamp.getTime() - a.lastTimestamp.getTime());
   }
 
   async getConversation(userId: string, otherUserId: string, limit: number = 30, offset: number = 0) {

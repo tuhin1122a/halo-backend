@@ -28,6 +28,17 @@ export class UsersController {
     return this.usersService.findProfile(req.user.userId);
   }
 
+  @Get('check-username')
+  async checkUsername(@Request() req, @Query('username') username: string) {
+    if (!username || username.trim().length === 0) {
+      throw new BadRequestException('Username is required');
+    }
+    const cleanUsername = username.trim().toLowerCase();
+    const existing = await this.usersService.findByUsername(cleanUsername);
+    const isAvailable = !existing || existing.id === req.user.userId;
+    return { username: cleanUsername, available: isAvailable };
+  }
+
   @Get('search')
   searchUsers(@Query('q') q: string) {
     if (!q || q.trim().length === 0) return [];
@@ -42,6 +53,7 @@ export class UsersController {
   @Patch('profile/update')
   async updateProfileInfo(@Request() req, @Body() body: { 
     name?: string; 
+    username?: string;
     password?: string;
     bio?: string;
     address?: string;
@@ -49,6 +61,7 @@ export class UsersController {
   }) {
     const data: any = {};
     if (body.name !== undefined) data.name = body.name;
+    if (body.username !== undefined) data.username = body.username;
     if (body.bio !== undefined) data.bio = body.bio;
     if (body.address !== undefined) data.address = body.address;
     if (body.education !== undefined) data.education = body.education;
@@ -62,7 +75,8 @@ export class UsersController {
 
   @Patch('profile')
   async update(@Request() req, @Body() updateDto: { 
-    name?: string; 
+    name?: string;
+    username?: string; 
     bio?: string; 
     address?: string; 
     education?: string; 

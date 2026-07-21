@@ -82,6 +82,22 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       return;
     }
 
+    // Check follow / message-request status
+    const followRecord = await this.prisma.follow.findFirst({
+      where: {
+        OR: [
+          { followerId: senderId, followingId: receiverId },
+          { followerId: receiverId, followingId: senderId },
+        ],
+        status: 'ACCEPTED',
+      },
+    });
+
+    if (!followRecord) {
+      client.emit('error', { message: 'You must be connected to chat. Send a follow request first.' });
+      return;
+    }
+
     // Save message to DB
     const message = await this.messagesService.createMessage({
       senderId,
@@ -143,6 +159,14 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       const receiverSockets = this.connectedUsers.get(receiverId)!;
       for (const socketId of receiverSockets) {
         this.server.to(socketId).emit('stopTyping', { senderId });
+      }
+    }
+  }
+  // Helper: emit an event to all sockets of a given user
+  emitToUser(userId: string, event: string, data: any) {
+    if (this.connectedUsers.has(userId)) {
+      for (const socketId of this.connectedUsers.get(userId)!) {
+        this.server.to(socketId).emit(event, data);
       }
     }
   }

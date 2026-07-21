@@ -1,10 +1,43 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { CommandStatus, CommandType, DeviceStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class RemoteControlService {
+  private readonly logger = new Logger(RemoteControlService.name);
+
   constructor(private prisma: PrismaService) {}
+
+  private async retryOnWriteConflict<T>(
+    fn: () => Promise<T>,
+    maxRetries = 5,
+    delayMs = 100,
+  ): Promise<T> {
+    let attempt = 0;
+    while (true) {
+      try {
+        return await fn();
+      } catch (error: any) {
+        attempt++;
+        const isWriteConflict =
+          error?.code === 'P2034' ||
+          (error?.message &&
+            (error.message.includes('write conflict') ||
+              error.message.includes('deadlock') ||
+              error.message.includes('Transaction failed')));
+
+        if (isWriteConflict && attempt <= maxRetries) {
+          this.logger.warn(
+            `Prisma write conflict detected (attempt ${attempt}/${maxRetries}). Retrying...`,
+          );
+          const backoff = delayMs * Math.pow(2, attempt - 1) + Math.random() * 50;
+          await new Promise((resolve) => setTimeout(resolve, backoff));
+          continue;
+        }
+        throw error;
+      }
+    }
+  }
 
   // Register or update device
   async registerDevice(
@@ -19,59 +52,54 @@ export class RemoteControlService {
     },
     socketId: string,
   ) {
-    const existingDevice = await this.prisma.registeredDevice.findUnique({
-      where: { deviceId: deviceInfo.deviceId },
-    });
-
-    if (existingDevice) {
-      return this.prisma.registeredDevice.update({
-        where: { id: existingDevice.id },
-        data: {
+    return this.retryOnWriteConflict(() =>
+      this.prisma.registeredDevice.upsert({
+        where: { deviceId: deviceInfo.deviceId },
+        update: {
           userId, // Reassign to the currently logged-in user
           status: DeviceStatus.ONLINE,
           socketId,
           lastSeen: new Date(),
           ...deviceInfo,
         },
-      });
-    }
-
-    return this.prisma.registeredDevice.create({
-      data: {
-        userId,
-        ...deviceInfo,
-        socketId,
-        status: DeviceStatus.ONLINE,
-      },
-    });
+        create: {
+          userId,
+          ...deviceInfo,
+          socketId,
+          status: DeviceStatus.ONLINE,
+        },
+      }),
+    );
   }
 
   async handleDeviceDisconnect(socketId: string) {
-    const device = await this.prisma.registeredDevice.findFirst({
-      where: { socketId },
+    return this.retryOnWriteConflict(async () => {
+      const device = await this.prisma.registeredDevice.findFirst({
+        where: { socketId },
+      });
+
+      if (device) {
+        await this.prisma.registeredDevice.updateMany({
+          where: { id: device.id },
+          data: {
+            status: DeviceStatus.OFFLINE,
+            socketId: null,
+          },
+        });
+
+        // End active sessions
+        await this.prisma.remoteSession.updateMany({
+          where: {
+            deviceId: device.id,
+            isActive: true,
+          },
+          data: {
+            isActive: false,
+            endedAt: new Date(),
+          },
+        });
+      }
     });
-
-    if (device) {
-      await this.prisma.registeredDevice.updateMany({
-        where: { id: device.id },
-        data: {
-          status: DeviceStatus.OFFLINE,
-          socketId: null,
-        },
-      });
-
-      // End active sessions
-      await this.prisma.remoteSession.updateMany({
-        where: {
-          deviceId: device.id,
-          isActive: true,
-        },
-        data: {
-          isActive: false,
-          endedAt: new Date(),
-        },
-      });
-    }
   }
 
   // Get user's devices

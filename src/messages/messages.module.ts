@@ -10,6 +10,6 @@ import { AuthModule } from '../auth/auth.module'; // for JwtAuthGuard if needed
   imports: [PrismaModule, UsersModule, AuthModule],
   controllers: [MessagesController],
   providers: [MessagesService, MessagesGateway],
-  exports: [MessagesService],
+  exports: [MessagesService, MessagesGateway],
 })
 export class MessagesModule {}

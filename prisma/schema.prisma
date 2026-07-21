@@ -20,6 +20,7 @@ enum Role {
 model User {
   id               String   @id @default(auto()) @map("_id") @db.ObjectId
   email            String   @unique
+  username         String?
   password         String?
   name             String?
   phoneNumber      String?  @unique
@@ -34,6 +35,7 @@ model User {
   bio              String?
   address          String?
   education        String?
+  category         String?
   avatarUrl        String?
   coverImageUrl    String?
   coverPosition    Json?
@@ -49,7 +51,36 @@ model User {
   // Messaging
   sentMessages      Message[] @relation("SentMessages")
   receivedMessages  Message[] @relation("ReceivedMessages")
+
+  // Follow system
+  following         Follow[]  @relation("Follower")
+  followers         Follow[]  @relation("Following")
+
+  // Stories
+  stories           Story[]
+  storyViews        StoryView[]
 }
+
+enum FollowStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+model Follow {
+  id          String       @id @default(auto()) @map("_id") @db.ObjectId
+  followerId  String       @db.ObjectId
+  followingId String       @db.ObjectId
+  status      FollowStatus @default(PENDING)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  follower    User         @relation("Follower",  fields: [followerId],  references: [id], onDelete: Cascade)
+  following   User         @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@unique([followerId, followingId])
+}
+
 
 // Remote Control System
 
@@ -193,3 +224,27 @@ model UserBlock {
 
   @@unique([blockerId, blockedId])
 }
+
+model Story {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId        String   @db.ObjectId
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  imageUrl      String
+  durationHours Int      @default(24)
+  createdAt     DateTime @default(now())
+  views         StoryView[]
+}
+
+model StoryView {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  storyId   String   @db.ObjectId
+  story     Story    @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  userId    String   @db.ObjectId
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reaction  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([storyId, userId])
+}
+

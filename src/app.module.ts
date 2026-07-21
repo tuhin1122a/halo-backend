@@ -9,6 +9,8 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware';
 import { RemoteControlModule } from './remote-control/remote-control.module';
 import { UsersModule } from './users/users.module';
 import { MessagesModule } from './messages/messages.module';
+import { FollowModule } from './follow/follow.module';
+import { StoriesModule } from './stories/stories.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { MessagesModule } from './messages/messages.module';
     UsersModule,
     RemoteControlModule,
     MessagesModule,
+    FollowModule,
+    StoriesModule,
   ],
   controllers: [AppController],
   providers: [
