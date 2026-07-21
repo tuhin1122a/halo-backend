@@ -2,7 +2,7 @@
 import { ForbiddenException, Injectable, UnauthorizedException, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Role } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { EmailService } from '../common/email.service';
 import { UsersService } from '../users/users.service';
