@@ -6,15 +6,11 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log'],
   });
   app.enableCors({
-    origin: [
-      'https://halo.codevionix.com',
-      'https://haloapi.codevionix.com',
-      'http://localhost:3000',
-      'http://localhost:5173',
-    ],
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-  }); // Enable CORS for the frontend
+    allowedHeaders: 'Content-Type,Accept,Authorization,X-Requested-With',
+  }); // Enable CORS for all origins
   app.setGlobalPrefix('api'); // Add /api prefix to all routes
   const port = process.env.PORT ?? 3000;
   await app.listen(port, '0.0.0.0');
