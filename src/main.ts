@@ -9,7 +9,6 @@ async function bootstrap() {
     origin: [
       'https://halo.codevionix.com',
       'https://haloapi.codevionix.com',
-      'https://taskpro.codevionix.com',
       'http://localhost:3000',
       'http://localhost:5173',
     ],
