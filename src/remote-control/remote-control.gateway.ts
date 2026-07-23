@@ -99,7 +99,14 @@ export class RemoteControlGateway
       } catch (e) {}
     }
     
-    await this.remoteControlService.handleDeviceDisconnect(client.id);
+    const disconnectedDevice = await this.remoteControlService.handleDeviceDisconnect(client.id);
+    if (disconnectedDevice?.userId) {
+      this.server.to(`user_${disconnectedDevice.userId}`).emit('device:status', {
+        deviceId: disconnectedDevice.id,
+        status: 'OFFLINE',
+      });
+      this.server.to(`user_${disconnectedDevice.userId}`).emit('devices:updated');
+    }
   }
 
   // Mobile app registers device
@@ -124,6 +131,14 @@ export class RemoteControlGateway
       // Join device-specific room
       client.join(`device:${device.id}`);
       
+      // Notify user's web clients that a device registered / status changed to ONLINE
+      this.server.to(`user_${userId}`).emit('device:status', {
+        deviceId: device.id,
+        status: 'ONLINE',
+        device,
+      });
+      this.server.to(`user_${userId}`).emit('devices:updated');
+
       return {
         success: true,
         device,
