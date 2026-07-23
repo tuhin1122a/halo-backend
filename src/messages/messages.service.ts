@@ -49,7 +49,24 @@ export class MessagesService {
       }
     }
 
-    const finalChats = Array.from(chatsMap.values());
+    const finalChats: any[] = [];
+    for (const chat of chatsMap.values()) {
+      if (!chat || !chat.id) continue;
+
+      const followRelation = await this.prisma.follow.findFirst({
+        where: {
+          OR: [
+            { followerId: userId, followingId: chat.id },
+            { followerId: chat.id, followingId: userId }
+          ],
+          status: { in: ['ACCEPTED', 'PENDING'] }
+        }
+      });
+      if (followRelation) {
+        finalChats.push(chat);
+      }
+    }
+
     return finalChats.sort((a, b) => new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime());
   }
 

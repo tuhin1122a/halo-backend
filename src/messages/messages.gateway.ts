@@ -82,6 +82,37 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       return;
     }
 
+    // Check follow / message-request status
+    const followRecord = await this.prisma.follow.findFirst({
+      where: {
+        OR: [
+          { followerId: senderId, followingId: receiverId },
+          { followerId: receiverId, followingId: senderId },
+        ]
+      },
+    });
+
+    if (!followRecord) {
+      // Auto-create a PENDING follow request so initial message acts as a message request!
+      try {
+        const newFollow = await this.prisma.follow.create({
+          data: {
+            followerId: senderId,
+            followingId: receiverId,
+            status: 'PENDING',
+          },
+          include: { follower: { select: { id: true, name: true, email: true, avatarUrl: true } } }
+        });
+        this.emitToUser(receiverId, 'follow:request', {
+          from: newFollow.follower,
+          followId: newFollow.id,
+        });
+      } catch (e) {}
+    } else if (followRecord.status === 'DECLINED') {
+      client.emit('error', { message: 'Message request was declined.' });
+      return;
+    }
+
     // Save message to DB
     const message = await this.messagesService.createMessage({
       senderId,
