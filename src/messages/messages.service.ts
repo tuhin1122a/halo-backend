@@ -28,6 +28,8 @@ export class MessagesService {
       const isSender = msg.senderId === userId;
       const partner = isSender ? msg.receiver : msg.sender;
 
+      if (!partner) continue;
+
       if (!chatsMap.has(partner.id)) {
         chatsMap.set(partner.id, {
           id: partner.id,
@@ -47,22 +49,8 @@ export class MessagesService {
       }
     }
 
-    const finalChats: any[] = [];
-    for (const chat of chatsMap.values()) {
-      const followRelation = await this.prisma.follow.findFirst({
-        where: {
-          OR: [
-            { followerId: userId, followingId: chat.id, status: 'ACCEPTED' },
-            { followerId: chat.id, followingId: userId, status: 'ACCEPTED' }
-          ]
-        }
-      });
-      if (followRelation) {
-        finalChats.push(chat);
-      }
-    }
-
-    return finalChats.sort((a, b) => b.lastTimestamp.getTime() - a.lastTimestamp.getTime());
+    const finalChats = Array.from(chatsMap.values());
+    return finalChats.sort((a, b) => new Date(b.lastTimestamp).getTime() - new Date(a.lastTimestamp).getTime());
   }
 
   async getConversation(userId: string, otherUserId: string, limit: number = 30, offset: number = 0) {

@@ -82,22 +82,6 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       return;
     }
 
-    // Check follow / message-request status
-    const followRecord = await this.prisma.follow.findFirst({
-      where: {
-        OR: [
-          { followerId: senderId, followingId: receiverId },
-          { followerId: receiverId, followingId: senderId },
-        ],
-        status: 'ACCEPTED',
-      },
-    });
-
-    if (!followRecord) {
-      client.emit('error', { message: 'You must be connected to chat. Send a follow request first.' });
-      return;
-    }
-
     // Save message to DB
     const message = await this.messagesService.createMessage({
       senderId,
