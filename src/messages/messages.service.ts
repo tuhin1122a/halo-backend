@@ -28,7 +28,7 @@ export class MessagesService {
       const isSender = msg.senderId === userId;
       const partner = isSender ? msg.receiver : msg.sender;
 
-      if (!partner) continue;
+      if (!partner || !partner.id || partner.id === userId) continue;
 
       if (!chatsMap.has(partner.id)) {
         chatsMap.set(partner.id, {
@@ -119,6 +119,9 @@ export class MessagesService {
     tempId?: string;
     replyToId?: string;
   }) {
+    if (data.senderId === data.receiverId) {
+      throw new ForbiddenException('Cannot send message to yourself');
+    }
     return this.prisma.message.create({
       data: {
         senderId: data.senderId,
@@ -131,7 +134,7 @@ export class MessagesService {
         replyToId: data.replyToId
       },
       include: {
-        sender: { select: { id: true, email: true, avatarUrl: true, isOnline: true } }
+        sender: { select: { id: true, email: true, name: true, avatarUrl: true, isOnline: true } }
       }
     });
   }

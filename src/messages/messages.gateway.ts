@@ -67,7 +67,10 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
   async handleSendMessage(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
     const { receiverId, content, senderId, tempId, replyToId } = payload;
     
-    // Check if blocked completely
+    if (senderId === receiverId) {
+      client.emit('error', { message: 'Cannot send message to yourself.' });
+      return;
+    }
     const block = await this.prisma.userBlock.findFirst({
       where: {
         OR: [
@@ -136,6 +139,8 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
     
     const messagePayload = {
       ...message,
+      senderName: message.sender?.name || message.sender?.email?.split('@')[0] || 'User',
+      senderAvatar: message.sender?.avatarUrl || null,
       isSilent: isReceiverMuted || isReceiverRestricted
     };
 
