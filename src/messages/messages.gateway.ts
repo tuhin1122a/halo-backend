@@ -182,6 +182,89 @@ export class MessagesGateway implements OnGatewayConnection, OnGatewayDisconnect
       }
     }
   }
+  @SubscribeMessage('markAsRead')
+  async handleMarkAsRead(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: any,
+  ) {
+    const senderId = payload?.senderId;
+    const userId = (client.handshake.query.userId as string) || client['userId'];
+    if (userId && senderId) {
+      await this.messagesService.markAsRead(userId, senderId);
+      const data = { readBy: userId, senderId };
+      this.emitToUser(senderId, 'messages:read', data);
+      this.emitToUser(senderId, 'messagesRead', data);
+      this.emitToUser(senderId, 'messagesMarkedRead', data);
+      this.server.to(`user_${senderId}`).emit('messages:read', data);
+      this.server.to(`user_${senderId}`).emit('messagesRead', data);
+      this.server.to(`user_${senderId}`).emit('messagesMarkedRead', data);
+    }
+  }
+
+  // ── CALLING SIGNALING ──
+  @SubscribeMessage('initiateCall')
+  handleInitiateCall(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
+    const targetId = payload?.targetId;
+    if (targetId) {
+      const data = { ...payload, callerId: payload.callerId || client.handshake.query.userId || client['userId'] };
+      this.emitToUser(targetId, 'incomingCall', data);
+      this.server.to(`user_${targetId}`).emit('incomingCall', data);
+    }
+  }
+
+  @SubscribeMessage('userRinging')
+  handleUserRinging(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
+    const targetId = payload?.targetId;
+    if (targetId) {
+      const data = { fromId: client.handshake.query.userId || client['userId'] };
+      this.emitToUser(targetId, 'userRinging', data);
+      this.server.to(`user_${targetId}`).emit('userRinging', data);
+    }
+  }
+
+  @SubscribeMessage('answerCall')
+  handleAnswerCall(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
+    const callerId = payload?.callerId;
+    if (callerId) {
+      const data = { receiverId: payload.receiverId || client.handshake.query.userId || client['userId'] };
+      this.emitToUser(callerId, 'callAccepted', data);
+      this.server.to(`user_${callerId}`).emit('callAccepted', data);
+    }
+  }
+
+  @SubscribeMessage('rejectCall')
+  handleRejectCall(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
+    const callerId = payload?.callerId;
+    if (callerId) {
+      const data = { receiverId: payload.receiverId || client.handshake.query.userId || client['userId'] };
+      this.emitToUser(callerId, 'callRejected', data);
+      this.server.to(`user_${callerId}`).emit('callRejected', data);
+    }
+  }
+
+  @SubscribeMessage('endCall')
+  handleEndCall(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
+    const targetId = payload?.targetId;
+    if (targetId) {
+      const data = { fromId: client.handshake.query.userId || client['userId'] };
+      this.emitToUser(targetId, 'callEnded', data);
+      this.server.to(`user_${targetId}`).emit('callEnded', data);
+    }
+  }
+
+  @SubscribeMessage('call:signal')
+  handleCallSignal(@ConnectedSocket() client: Socket, @MessageBody() payload: any) {
+    const targetId = payload?.targetId;
+    if (targetId) {
+      const data = {
+        senderId: payload.senderId || client.handshake.query.userId || client['userId'],
+        signal: payload.signal,
+      };
+      this.emitToUser(targetId, 'call:signal', data);
+      this.server.to(`user_${targetId}`).emit('call:signal', data);
+    }
+  }
+
   // Helper: emit an event to all sockets of a given user
   emitToUser(userId: string, event: string, data: any) {
     if (this.connectedUsers.has(userId)) {

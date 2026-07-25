@@ -1,5 +1,6 @@
 import { Controller, Get, Post, Patch, Delete, Param, Query, UseGuards, Request, Body, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { MessagesService } from './messages.service';
+import { MessagesGateway } from './messages.gateway';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { extname } from 'path';
@@ -24,7 +25,10 @@ const storage = multer.diskStorage({
 @Controller('messages')
 @UseGuards(JwtAuthGuard)
 export class MessagesController {
-  constructor(private readonly messagesService: MessagesService) {}
+  constructor(
+    private readonly messagesService: MessagesService,
+    private readonly messagesGateway: MessagesGateway,
+  ) {}
 
   @Get('chats')
   async getRecentChats(@Request() req) {
@@ -46,6 +50,10 @@ export class MessagesController {
   @Patch('read/:senderId')
   async markAsRead(@Request() req, @Param('senderId') senderId: string) {
     await this.messagesService.markAsRead(req.user.userId, senderId);
+    const data = { readBy: req.user.userId, senderId };
+    this.messagesGateway.emitToUser(senderId, 'messagesRead', data);
+    this.messagesGateway.emitToUser(senderId, 'messages:read', data);
+    this.messagesGateway.emitToUser(senderId, 'messagesMarkedRead', data);
     return { success: true };
   }
 
