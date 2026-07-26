@@ -18,11 +18,7 @@ function isValidObjectId(id: string): boolean {
 
 @WebSocketGateway({
   cors: {
-    origin: [
-      'https://taskpro.codevionix.com',
-      'http://localhost:3000',
-      'http://localhost:5173'
-    ],
+    origin: (origin: string, callback: any) => callback(null, true),
     credentials: true,
   },
   maxHttpBufferSize: 1e8, // 100 MB for large payloads (images)

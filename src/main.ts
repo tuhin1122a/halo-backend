@@ -6,10 +6,10 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log'],
   });
   app.enableCors({
-    origin: true,
+    origin: (origin, callback) => callback(null, true),
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
-    allowedHeaders: '*',
+    allowedHeaders: 'Content-Type, Accept, Authorization, X-Requested-With, token, userId',
   }); // Enable CORS for all origins and headers
   app.setGlobalPrefix('api'); // Add /api prefix to all routes
   const port = process.env.PORT ?? 3000;
