@@ -411,6 +411,37 @@ export class RemoteControlGateway
     }
   }
 
+  @SubscribeMessage('device:lock_status')
+  async handleLockStatus(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { sessionId: string; isLocked: boolean; isScreenOn: boolean },
+  ) {
+    const userId = client['userId'];
+    if (userId) {
+      const dev = await this.remoteControlService.touchDevicePresenceBySocket(client.id, userId);
+      if (dev) {
+        this.server.to(`user_${userId}`).emit('device:status', {
+          deviceId: dev.id,
+          status: 'ONLINE',
+          device: dev,
+        });
+      }
+    }
+    if (data?.sessionId) {
+      this.server.to(`session:${data.sessionId}`).emit('device:lock_status', data);
+    }
+  }
+
+  @SubscribeMessage('device:lock_type')
+  async handleLockType(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() data: { sessionId: string; lockType: string },
+  ) {
+    if (data?.sessionId) {
+      this.server.to(`session:${data.sessionId}`).emit('device:lock_type', data);
+    }
+  }
+
   // Screen frame streaming (fallback if WebRTC fails)
   @SubscribeMessage('screen:frame')
   async handleScreenFrame(

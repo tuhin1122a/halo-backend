@@ -103,6 +103,33 @@ export class RemoteControlService {
     });
   }
 
+  async touchDevicePresenceBySocket(socketId: string, userId: string) {
+    return this.retryOnWriteConflict(async () => {
+      const device = await this.prisma.registeredDevice.findFirst({
+        where: {
+          OR: [
+            { socketId },
+            { userId }
+          ]
+        },
+        orderBy: { lastSeen: 'desc' },
+      });
+
+      if (device) {
+        await this.prisma.registeredDevice.updateMany({
+          where: { id: device.id },
+          data: {
+            status: DeviceStatus.ONLINE,
+            socketId,
+            lastSeen: new Date(),
+          },
+        });
+        return { ...device, status: DeviceStatus.ONLINE };
+      }
+      return null;
+    });
+  }
+
   // Get user's devices
   async getUserDevices(userId: string) {
     return this.prisma.registeredDevice.findMany({
@@ -131,7 +158,15 @@ export class RemoteControlService {
     }
 
     if (device.status !== DeviceStatus.ONLINE) {
-      throw new Error('Device is not online');
+      const isRecentlySeen = device.lastSeen && (new Date().getTime() - new Date(device.lastSeen).getTime() < 60000);
+      if (isRecentlySeen && device.socketId) {
+        await this.prisma.registeredDevice.update({
+          where: { id: device.id },
+          data: { status: DeviceStatus.ONLINE },
+        });
+      } else {
+        throw new Error('Device is not online');
+      }
     }
 
     // End any existing active sessions for this device
